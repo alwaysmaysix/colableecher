@@ -11,15 +11,50 @@ from colab_leecher.utility.variables import YTDL, MSG, Messages, Paths
 from colab_leecher.utility.helper import getTime, keyboard, sizeUnit, status_bar, sysINFO
 
 
+async def get_YT_Formats(link):
+    """Fetch available formats for the given YouTube link."""
+    with yt_dlp.YoutubeDL({"logger": MyLogger()}) as ydl:
+        try:
+            info = ydl.extract_info(link, download=False)
+            if "formats" in info:
+                # Extract the format ID, format note (description), and filesize
+                formats = [
+                    (fmt["format_id"], fmt["format_note"], fmt.get("filesize", 0))
+                    for fmt in info["formats"] if fmt.get("filesize")
+                ]
+                return formats
+            else:
+                return []
+        except Exception as e:
+            await cancelTask(f"Error fetching formats: {str(e)}")
+            return []
+
+
 async def YTDL_Status(link, num):
     global Messages, YTDL
+
+    # Fetch video name and set initial status
     name = await get_YT_Name(link)
     Messages.status_head = f"<b>📥 DOWNLOADING FROM » </b><i>🔗Link {str(num).zfill(2)}</i>\n\n<code>{name}</code>\n"
 
-    YTDL_Thread = Thread(target=YouTubeDL, name="YouTubeDL", args=(link,))
+    # Fetch available formats
+    formats = await get_YT_Formats(link)
+    if not formats:
+        await cancelTask("No formats available for this link.")
+        return
+
+    # Prompt the user for format choice
+    format_choice = await prompt_format_choice(formats)
+    if not format_choice:
+        await cancelTask("No format selected.")
+        return
+
+    # Start download with selected format
+    YTDL_Thread = Thread(target=YouTubeDL, name="YouTubeDL", args=(link, format_choice))
     YTDL_Thread.start()
 
-    while YTDL_Thread.is_alive():  # Until ytdl is downloading
+    # Existing code to handle download status and updates
+    while YTDL_Thread.is_alive():
         if YTDL.header:
             sys_text = sysINFO()
             message = YTDL.header
@@ -42,6 +77,7 @@ async def YTDL_Status(link, num):
                 pass
 
         await sleep(2.5)
+
 
 
 class MyLogger:
@@ -96,7 +132,7 @@ def YouTubeDL(url):
             logging.info(d)
 
     ydl_opts = {
-        "format": "best",
+        "format": selected_format,
         "allow_multiple_video_streams": True,
         "allow_multiple_audio_streams": True,
         "writethumbnail": True,
