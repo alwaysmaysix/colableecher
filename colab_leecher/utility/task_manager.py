@@ -177,6 +177,13 @@ async def taskScheduler():
     else:
         await Do_Mirror(BOT.SOURCE, BOT.Mode.ytdl, is_zip, is_unzip, is_dualzip)
 
+    if BOT.Mode.ytdl:
+        # Get format selected by the user
+        selected_format = await wait_for_user_format_choice()
+        if not selected_format:
+            await cancelTask("No format selected.")
+            return
+
 
 async def Do_Leech(source, is_dir, is_ytdl, is_zip, is_unzip, is_dualzip):
     if is_dir:
