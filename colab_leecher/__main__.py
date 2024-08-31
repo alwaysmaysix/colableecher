@@ -76,7 +76,10 @@ async def yt_upload(client, message):
     text = "<b>⚡ Send YTDL DOWNLOAD LINK(s) 🔗»</b>\n\n🦀 Follow the below pattern\n\n<code>https//linktofile1.mp4\nhttps//linktofile2.mp4\n[Custom name space.mp4]\n{Password for zipping}</code>"
 
     src_request_msg = await task_starter(message, text)
-
+    
+    # Add this part to start the format selection process
+    if BOT.Mode.ytdl:
+        await YTDL_Status(message.text, 1)
 
 @colab_bot.on_message(filters.command("settings") & filters.private)
 async def settings(client, message):
